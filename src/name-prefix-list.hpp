@@ -49,7 +49,10 @@ public:
       \retval false Name and source combination already exists.
    */
   bool
-  insert(const ndn::Name& name, const std::string& source = "");
+  insert(const ndn::Name& name, const std::string& source = "", const size_t cost = 0);
+
+  bool
+  insert(const std::tuple<ndn::Name, size_t> nameCost);
 
   /*! \brief Deletes name and source combination
       \retval true Name and source combination is deleted.
@@ -66,6 +69,9 @@ public:
 
   std::list<ndn::Name>
   getNames() const;
+
+  std::list<std::tuple<ndn::Name, size_t>>
+  getNameCosts() const;
 
 #ifdef WITH_TESTS
   /*! Returns the sources that this name has.
@@ -89,11 +95,18 @@ private: // non-member operators
   friend bool
   operator==(const NamePrefixList& lhs, const NamePrefixList& rhs)
   {
-    return lhs.getNames() == rhs.getNames();
+    return lhs.getNameCosts() == rhs.getNameCosts();
   }
 
+  struct NameSourceCost {
+    std::set<std::string> sources;
+    // TODO: Cost is currently just the most recent source added; is this a good way of handling it?
+    // How should we pick a cost from multiple sources?
+    size_t cost;
+  };
+
 private:
-  std::map<ndn::Name, std::set<std::string>> m_namesSources;
+  std::map<ndn::Name, NameSourceCost> m_namesSources;
 
   friend std::ostream&
   operator<<(std::ostream& os, const NamePrefixList& list);

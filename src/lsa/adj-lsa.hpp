@@ -107,7 +107,7 @@ public:
   void
   wireDecode(const ndn::Block& wire);
 
-  std::tuple<bool, std::list<ndn::Name>, std::list<ndn::Name>>
+  std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
   update(const std::shared_ptr<Lsa>& lsa) override;
 
 private:

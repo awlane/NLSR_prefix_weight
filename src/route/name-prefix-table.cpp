@@ -62,8 +62,8 @@ NamePrefixTable::~NamePrefixTable()
 
 void
 NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
-                                const std::list<ndn::Name>& namesToAdd,
-                                const std::list<ndn::Name>& namesToRemove)
+                                const std::list<std::tuple<ndn::Name, size_t>>& namesToAdd,
+                                const std::list<std::tuple<ndn::Name, size_t>>& namesToRemove)
 {
   if (m_ownRouterName == lsa->getOriginRouter()) {
     return;
@@ -88,14 +88,14 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
     }
 
     for (const auto& name : namesToAdd) {
-      if (name != m_ownRouterName) {
-        addEntry(name, lsa->getOriginRouter());
+      if (std::get<0>(name) != m_ownRouterName) {
+        addEntry(std::get<0>(name), lsa->getOriginRouter());
       }
     }
 
     for (const auto& name : namesToRemove) {
-      if (name != m_ownRouterName) {
-        removeEntry(name, lsa->getOriginRouter());
+      if (std::get<0>(name) != m_ownRouterName) {
+        removeEntry(std::get<0>(name), lsa->getOriginRouter());
       }
     }
   }

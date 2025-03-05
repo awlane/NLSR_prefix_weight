@@ -34,10 +34,19 @@ NamePrefixList::NamePrefixList(std::initializer_list<ndn::Name> names)
 }
 
 bool
-NamePrefixList::insert(const ndn::Name& name, const std::string& source)
+NamePrefixList::insert(const ndn::Name& name, const std::string& source, const size_t cost)
 {
   auto& sources = m_namesSources[name];
-  return sources.insert(source).second;
+  sources.cost = cost;
+  return sources.sources.insert(source).second;
+}
+
+bool
+NamePrefixList::insert(const std::tuple<ndn::Name, size_t> nameCost)
+{
+  auto& sources = m_namesSources[std::get<0>(nameCost)];
+  sources.cost = std::get<1>(nameCost);
+  return sources.sources.insert("").second;
 }
 
 bool
@@ -48,8 +57,8 @@ NamePrefixList::erase(const ndn::Name& name, const std::string& source)
     return false;
   }
 
-  bool isRemoved = it->second.erase(source);
-  if (it->second.empty()) {
+  bool isRemoved = it->second.sources.erase(source);
+  if (it->second.sources.empty()) {
     m_namesSources.erase(it);
   }
   return isRemoved;
@@ -63,6 +72,16 @@ NamePrefixList::getNames() const
     names.push_back(name);
   }
   return names;
+}
+
+std::list<std::tuple<ndn::Name, size_t>>
+NamePrefixList::getNameCosts() const
+{
+  std::list<std::tuple<ndn::Name, size_t>> nameCosts;
+  for (const auto& [name, sources] : m_namesSources) {
+    nameCosts.push_back(std::tuple<ndn::Name, size_t>(name, sources.cost));
+  }
+  return nameCosts;
 }
 
 #ifdef WITH_TESTS
@@ -84,7 +103,7 @@ operator<<(std::ostream& os, const NamePrefixList& list)
   os << "Name prefix list: {\n";
   for (const auto& [name, sources] : list.m_namesSources) {
     os << name << "\nSources:\n";
-    for (const auto& source : sources) {
+    for (const auto& source : sources.sources) {
       os << "  " << source << "\n";
     }
   }

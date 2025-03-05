@@ -29,7 +29,7 @@ NameLsa::NameLsa(const ndn::Name& originRouter, uint64_t seqNo,
                  const NamePrefixList& npl)
   : Lsa(originRouter, seqNo, timepoint)
 {
-  for (const auto& name : npl.getNames()) {
+  for (const auto& name : npl.getNameCosts()) {
     addName(name);
   }
 }
@@ -45,7 +45,7 @@ NameLsa::wireEncode(ndn::EncodingImpl<TAG>& block) const
 {
   size_t totalLength = 0;
 
-  auto names = m_npl.getNames();
+  auto names = m_npl.getNameCosts();
 
   for (auto it = names.rbegin();  it != names.rend(); ++it) {
     totalLength += it->wireEncode(block);
@@ -102,8 +102,9 @@ NameLsa::wireDecode(const ndn::Block& wire)
 
   NamePrefixList npl;
   for (; val != m_wire.elements_end(); ++val) {
-    if (val->type() == ndn::tlv::Name) {
-      npl.insert(ndn::Name(*val));
+    if (val->type() == nlsr::tlv::PrefixCost) {
+      //TODO: Implement this structure as a type instead and add decoding
+      npl.insert(std::tuple<ndn::Name, size_t>(*val));
     }
     else {
       NDN_THROW(Error("Name", val->type()));
@@ -122,7 +123,7 @@ NameLsa::print(std::ostream& os) const
   }
 }
 
-std::tuple<bool, std::list<ndn::Name>, std::list<ndn::Name>>
+std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
 NameLsa::update(const std::shared_ptr<Lsa>& lsa)
 {
   auto nlsa = std::static_pointer_cast<NameLsa>(lsa);
@@ -130,9 +131,9 @@ NameLsa::update(const std::shared_ptr<Lsa>& lsa)
 
   // Obtain the set difference of the current and the incoming
   // name prefix sets, and add those.
-  std::list<ndn::Name> newNames = nlsa->getNpl().getNames();
-  std::list<ndn::Name> oldNames = m_npl.getNames();
-  std::list<ndn::Name> namesToAdd;
+  std::list<std::tuple<ndn::Name, size_t>> newNames = nlsa->getNpl().getNameCosts();
+  std::list<std::tuple<ndn::Name, size_t>> oldNames = m_npl.getNameCosts();
+  std::list<std::tuple<ndn::Name, size_t>> namesToAdd;
   std::set_difference(newNames.begin(), newNames.end(), oldNames.begin(), oldNames.end(),
                       std::inserter(namesToAdd, namesToAdd.begin()));
   for (const auto& name : namesToAdd) {
@@ -141,7 +142,7 @@ NameLsa::update(const std::shared_ptr<Lsa>& lsa)
   }
 
   // Also remove any names that are no longer being advertised.
-  std::list<ndn::Name> namesToRemove;
+  std::list<std::tuple<ndn::Name, size_t>> namesToRemove;
   std::set_difference(oldNames.begin(), oldNames.end(), newNames.begin(), newNames.end(),
                       std::inserter(namesToRemove, namesToRemove.begin()));
   for (const auto& name : namesToRemove) {

@@ -112,7 +112,7 @@ public:
     m_expiringEventId = eid;
   }
 
-  virtual std::tuple<bool, std::list<ndn::Name>, std::list<ndn::Name>>
+  virtual std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
   update(const std::shared_ptr<Lsa>& lsa) = 0;
 
   virtual const ndn::Block&

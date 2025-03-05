@@ -129,7 +129,7 @@ CoordinateLsa::print(std::ostream& os) const
   }
 }
 
-std::tuple<bool, std::list<ndn::Name>, std::list<ndn::Name>>
+std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
 CoordinateLsa::update(const std::shared_ptr<Lsa>& lsa)
 {
   auto clsa = std::static_pointer_cast<CoordinateLsa>(lsa);
@@ -139,9 +139,9 @@ CoordinateLsa::update(const std::shared_ptr<Lsa>& lsa)
     for (const auto& angle : clsa->getTheta()) {
       m_hyperbolicAngles.push_back(angle);
     }
-    return {true, std::list<ndn::Name>{}, std::list<ndn::Name>{}};
+    return {true, std::list<std::tuple<ndn::Name, size_t>>{}, std::list<std::tuple<ndn::Name, size_t>>{}};
   }
-  return {false, std::list<ndn::Name>{}, std::list<ndn::Name>{}};
+  return {false, std::list<std::tuple<ndn::Name, size_t>>{}, std::list<std::tuple<ndn::Name, size_t>>{}};
 }
 
 } // namespace nlsr

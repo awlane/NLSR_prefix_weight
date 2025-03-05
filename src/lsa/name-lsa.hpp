@@ -76,17 +76,17 @@ public:
   }
 
   void
-  addName(const ndn::Name& name)
+  addName(const std::tuple<ndn::Name, size_t>& name)
   {
     m_wire.reset();
     m_npl.insert(name);
   }
 
   void
-  removeName(const ndn::Name& name)
+  removeName(const std::tuple<ndn::Name, size_t>& name)
   {
     m_wire.reset();
-    m_npl.erase(name);
+    m_npl.erase(std::get<0>(name));
   }
 
   template<ndn::encoding::Tag TAG>
@@ -99,7 +99,7 @@ public:
   void
   wireDecode(const ndn::Block& wire);
 
-  std::tuple<bool, std::list<ndn::Name>, std::list<ndn::Name>>
+  std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
   update(const std::shared_ptr<Lsa>& lsa) override;
 
 private:
