@@ -335,7 +335,7 @@ public:
   ndn::signal::Signal<Lsdb, Statistics::PacketType> lsaIncrementSignal;
   ndn::signal::Signal<Lsdb, ndn::Data> afterSegmentValidatedSignal;
   using AfterLsdbModified = ndn::signal::Signal<Lsdb, std::shared_ptr<Lsa>, LsdbUpdate,
-                                                std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>;
+                                                std::list<nlsr::PrefixInfo*>, std::list<nlsr::PrefixInfo*>>;
   AfterLsdbModified onLsdbModified;
 
 PUBLIC_WITH_TESTS_ELSE_PRIVATE:

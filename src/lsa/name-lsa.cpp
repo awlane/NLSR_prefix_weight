@@ -29,7 +29,7 @@ NameLsa::NameLsa(const ndn::Name& originRouter, uint64_t seqNo,
                  const NamePrefixList& npl)
   : Lsa(originRouter, seqNo, timepoint)
 {
-  for (const auto& name : npl.getNameCosts()) {
+  for (const auto& name : npl.getPrefixInfo()) {
     addName(name);
   }
 }
@@ -45,10 +45,11 @@ NameLsa::wireEncode(ndn::EncodingImpl<TAG>& block) const
 {
   size_t totalLength = 0;
 
-  auto names = m_npl.getNameCosts();
+  auto names = m_npl.getPrefixInfo();
 
   for (auto it = names.rbegin();  it != names.rend(); ++it) {
-    totalLength += it->wireEncode(block);
+    // ugly :(
+    totalLength += (*it)->wireEncode(block);
   }
 
   totalLength += Lsa::wireEncode(block);
@@ -102,9 +103,9 @@ NameLsa::wireDecode(const ndn::Block& wire)
 
   NamePrefixList npl;
   for (; val != m_wire.elements_end(); ++val) {
-    if (val->type() == nlsr::tlv::PrefixCost) {
+    if (val->type() == nlsr::tlv::PrefixInfo) {
       //TODO: Implement this structure as a type instead and add decoding
-      npl.insert(std::tuple<ndn::Name, size_t>(*val));
+      npl.insert(PrefixInfo(*val));
     }
     else {
       NDN_THROW(Error("Name", val->type()));
@@ -118,12 +119,13 @@ NameLsa::print(std::ostream& os) const
 {
   os << "      Names:\n";
   int i = 0;
-  for (const auto& name : m_npl.getNames()) {
-    os << "        Name " << i++ << ": " << name << "\n";
+  for (const auto& name : m_npl.getPrefixInfo()) {
+    os << "        Name " << i++ << ": " << name->getName() << "\n"
+    << "        Cost " << i << ": " << name->getCost() << "\n";
   }
 }
 
-std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
+std::tuple<bool, std::list<PrefixInfo*>, std::list<PrefixInfo*>>
 NameLsa::update(const std::shared_ptr<Lsa>& lsa)
 {
   auto nlsa = std::static_pointer_cast<NameLsa>(lsa);
@@ -131,9 +133,9 @@ NameLsa::update(const std::shared_ptr<Lsa>& lsa)
 
   // Obtain the set difference of the current and the incoming
   // name prefix sets, and add those.
-  std::list<std::tuple<ndn::Name, size_t>> newNames = nlsa->getNpl().getNameCosts();
-  std::list<std::tuple<ndn::Name, size_t>> oldNames = m_npl.getNameCosts();
-  std::list<std::tuple<ndn::Name, size_t>> namesToAdd;
+  std::list<PrefixInfo*> newNames = nlsa->getNpl().getPrefixInfo();
+  std::list<PrefixInfo*> oldNames = m_npl.getPrefixInfo();
+  std::list<PrefixInfo*> namesToAdd;
   std::set_difference(newNames.begin(), newNames.end(), oldNames.begin(), oldNames.end(),
                       std::inserter(namesToAdd, namesToAdd.begin()));
   for (const auto& name : namesToAdd) {
@@ -142,7 +144,7 @@ NameLsa::update(const std::shared_ptr<Lsa>& lsa)
   }
 
   // Also remove any names that are no longer being advertised.
-  std::list<std::tuple<ndn::Name, size_t>> namesToRemove;
+  std::list<PrefixInfo*> namesToRemove;
   std::set_difference(oldNames.begin(), oldNames.end(), newNames.begin(), newNames.end(),
                       std::inserter(namesToRemove, namesToRemove.begin()));
   for (const auto& name : namesToRemove) {

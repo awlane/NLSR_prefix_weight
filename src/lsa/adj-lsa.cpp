@@ -126,7 +126,7 @@ AdjLsa::print(std::ostream& os) const
   }
 }
 
-std::tuple<bool, std::list<std::tuple<ndn::Name, size_t>>, std::list<std::tuple<ndn::Name, size_t>>>
+std::tuple<bool, std::list<PrefixInfo*>, std::list<PrefixInfo*>>
 AdjLsa::update(const std::shared_ptr<Lsa>& lsa)
 {
   auto alsa = std::static_pointer_cast<AdjLsa>(lsa);
@@ -135,9 +135,9 @@ AdjLsa::update(const std::shared_ptr<Lsa>& lsa)
     for (const auto& adjacent : alsa->getAdl()) {
       addAdjacent(adjacent);
     }
-    return {true, std::list<std::tuple<ndn::Name, size_t>>{}, std::list<std::tuple<ndn::Name, size_t>>{}};
+    return {true, std::list<PrefixInfo*>{}, std::list<PrefixInfo*>{}};
   }
-  return {false, std::list<std::tuple<ndn::Name, size_t>>{}, std::list<std::tuple<ndn::Name, size_t>>{}};
+  return {false, std::list<PrefixInfo*>{}, std::list<PrefixInfo*>{}};
 }
 
 } // namespace nlsr

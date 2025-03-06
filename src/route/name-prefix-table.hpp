@@ -56,8 +56,8 @@ public:
    */
   void
   updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
-    const std::list<std::tuple<ndn::Name, size_t>>& namesToAdd,
-    const std::list<std::tuple<ndn::Name, size_t>>& namesToRemove);
+    const std::list<nlsr::PrefixInfo*>& namesToAdd,
+    const std::list<nlsr::PrefixInfo*>& namesToRemove);
 
   /*! \brief Adds a destination to the specified name prefix.
     \param name The name prefix

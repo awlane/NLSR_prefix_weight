@@ -36,6 +36,60 @@
 
 namespace nlsr {
 
+class PrefixInfo {
+  //This needs to contain name and cost, source only matters locally
+  class Error : public ndn::tlv::Error
+  {
+  public:
+    using ndn::tlv::Error::Error;
+  };
+
+  public:
+  PrefixInfo();
+
+  PrefixInfo(const ndn::Block& block)
+  {
+    wireDecode(block);
+  }
+
+  PrefixInfo(const ndn::Name name, const double cost) {
+    m_prefixName = name;
+    m_prefixCost = cost;
+  }
+
+  ndn::Name getName() const
+  {
+    return m_prefixName;
+  }
+
+  double getCost() const
+  {
+    return m_prefixCost;
+  }
+
+  template<ndn::encoding::Tag TAG>
+  size_t
+  wireEncode(ndn::EncodingImpl<TAG>& block) const;
+
+  const ndn::Block&
+  wireEncode() const;
+
+  void
+  wireDecode(const ndn::Block& wire);
+
+  private:
+  friend bool
+  operator==(const PrefixInfo& lhs, const PrefixInfo& rhs)
+  {
+    return ((lhs.getName() == rhs.getName()) && (lhs.getCost() == rhs.getCost()));
+  }
+
+  ndn::Name m_prefixName;
+  double m_prefixCost;
+
+  mutable ndn::Block m_wire;
+};
+
 class NamePrefixList : private boost::equality_comparable<NamePrefixList>
 {
 public:
@@ -49,10 +103,13 @@ public:
       \retval false Name and source combination already exists.
    */
   bool
-  insert(const ndn::Name& name, const std::string& source = "", const size_t cost = 0);
+  insert(const ndn::Name& name, const std::string& source = "", const double cost = 0);
 
   bool
-  insert(const std::tuple<ndn::Name, size_t> nameCost);
+  insert(const PrefixInfo* nameCost);
+
+  bool
+  insert(const PrefixInfo nameCost);
 
   /*! \brief Deletes name and source combination
       \retval true Name and source combination is deleted.
@@ -70,8 +127,8 @@ public:
   std::list<ndn::Name>
   getNames() const;
 
-  std::list<std::tuple<ndn::Name, size_t>>
-  getNameCosts() const;
+  std::list<PrefixInfo*>
+  getPrefixInfo() const;
 
 #ifdef WITH_TESTS
   /*! Returns the sources that this name has.
@@ -95,18 +152,18 @@ private: // non-member operators
   friend bool
   operator==(const NamePrefixList& lhs, const NamePrefixList& rhs)
   {
-    return lhs.getNameCosts() == rhs.getNameCosts();
+    return lhs.getPrefixInfo() == rhs.getPrefixInfo();
   }
 
-  struct NameSourceCost {
+  struct PrefixInfoSource {
     std::set<std::string> sources;
     // TODO: Cost is currently just the most recent source added; is this a good way of handling it?
     // How should we pick a cost from multiple sources?
-    size_t cost;
+    PrefixInfo* costObj;
   };
 
 private:
-  std::map<ndn::Name, NameSourceCost> m_namesSources;
+  std::map<ndn::Name, PrefixInfoSource> m_namesSources;
 
   friend std::ostream&
   operator<<(std::ostream& os, const NamePrefixList& list);

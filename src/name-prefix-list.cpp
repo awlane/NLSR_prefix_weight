@@ -21,6 +21,7 @@
 
 #include "name-prefix-list.hpp"
 #include "common.hpp"
+#include "tlv-nlsr.hpp"
 
 namespace nlsr {
 
@@ -34,19 +35,27 @@ NamePrefixList::NamePrefixList(std::initializer_list<ndn::Name> names)
 }
 
 bool
-NamePrefixList::insert(const ndn::Name& name, const std::string& source, const size_t cost)
+NamePrefixList::insert(const ndn::Name& name, const std::string& source, const double cost)
 {
-  auto& sources = m_namesSources[name];
-  sources.cost = cost;
-  return sources.sources.insert(source).second;
+  auto& soucePrefixInfo = m_namesSources[name];
+  soucePrefixInfo.costObj = new PrefixInfo(name, cost);
+  return soucePrefixInfo.sources.insert(source).second;
 }
 
 bool
-NamePrefixList::insert(const std::tuple<ndn::Name, size_t> nameCost)
+NamePrefixList::insert(const PrefixInfo* nameCost)
 {
-  auto& sources = m_namesSources[std::get<0>(nameCost)];
-  sources.cost = std::get<1>(nameCost);
-  return sources.sources.insert("").second;
+  auto& soucePrefixInfo = m_namesSources[nameCost->getName()];
+  soucePrefixInfo.costObj = new PrefixInfo(nameCost->getName(), nameCost->getCost());
+  return soucePrefixInfo.sources.insert("").second;
+}
+
+bool
+NamePrefixList::insert(const PrefixInfo nameCost)
+{
+  auto& soucePrefixInfo = m_namesSources[nameCost.getName()];
+  soucePrefixInfo.costObj = new PrefixInfo(nameCost.getName(), nameCost.getCost());
+  return soucePrefixInfo.sources.insert("").second;
 }
 
 bool
@@ -74,12 +83,12 @@ NamePrefixList::getNames() const
   return names;
 }
 
-std::list<std::tuple<ndn::Name, size_t>>
-NamePrefixList::getNameCosts() const
+std::list<PrefixInfo*>
+NamePrefixList::getPrefixInfo() const
 {
-  std::list<std::tuple<ndn::Name, size_t>> nameCosts;
-  for (const auto& [name, sources] : m_namesSources) {
-    nameCosts.push_back(std::tuple<ndn::Name, size_t>(name, sources.cost));
+  std::list<PrefixInfo*> nameCosts;
+  for (const auto& [name, soucePrefixInfo] : m_namesSources) {
+    nameCosts.push_back(new PrefixInfo(name, soucePrefixInfo.costObj->getCost()));
   }
   return nameCosts;
 }
@@ -109,6 +118,72 @@ operator<<(std::ostream& os, const NamePrefixList& list)
   }
   os << "}" << std::endl;
   return os;
+}
+
+NDN_CXX_DEFINE_WIRE_ENCODE_INSTANTIATIONS(PrefixInfo);
+
+template<ndn::encoding::Tag TAG>
+size_t
+PrefixInfo::wireEncode(ndn::EncodingImpl<TAG>& encoder) const
+{
+  size_t totalLength = 0;
+
+  totalLength += prependDoubleBlock(encoder, nlsr::tlv::Cost, m_prefixCost);
+
+  totalLength += m_prefixName.wireEncode(encoder);
+
+  totalLength += encoder.prependVarNumber(totalLength);
+  totalLength += encoder.prependVarNumber(nlsr::tlv::PrefixInfo);
+
+  return totalLength;
+}
+
+const ndn::Block&
+PrefixInfo::wireEncode() const
+{
+  if (m_wire.hasWire()) {
+    return m_wire;
+  }
+
+  ndn::EncodingEstimator estimator;
+  size_t estimatedSize = wireEncode(estimator);
+
+  ndn::EncodingBuffer buffer(estimatedSize, 0);
+  wireEncode(buffer);
+
+  m_wire = buffer.block();
+
+  return m_wire;
+}
+
+void
+PrefixInfo::wireDecode(const ndn::Block& wire)
+{
+  m_wire = wire;
+
+  if (m_wire.type() != nlsr::tlv::PrefixInfo) {
+    NDN_THROW(Error("PrefixInfo", m_wire.type()));
+  }
+
+  m_wire.parse();
+
+  auto val = m_wire.elements_begin();
+
+  if (val != m_wire.elements_end() && val->type() == ndn::tlv::Name) {
+    m_prefixName.wireDecode(*val);
+    ++val;
+  }
+  else {
+    NDN_THROW(Error("Missing required Name field"));
+  }
+
+  if (val != m_wire.elements_end() && val->type() == nlsr::tlv::Cost) {
+    m_prefixCost = ndn::encoding::readDouble(*val);
+    ++val;
+  }
+  else {
+    NDN_THROW(Error("Missing required Cost field"));
+  }
 }
 
 } // namespace nlsr
