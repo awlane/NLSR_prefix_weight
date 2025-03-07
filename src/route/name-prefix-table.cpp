@@ -29,6 +29,8 @@
 #include <list>
 #include <utility>
 
+#include <iostream>
+
 namespace nlsr {
 
 INIT_LOGGER(route.NamePrefixTable);
@@ -75,6 +77,8 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
 
     if (lsa->getType() == Lsa::Type::NAME) {
       auto nlsa = std::static_pointer_cast<NameLsa>(lsa);
+      std::cout << "INSTALLED" << std::endl;
+      std::cout << nlsa->getNpl() << std::endl;
       for (const auto& prefix : nlsa->getNpl().getPrefixInfo()) {
         if (prefix->getName() != m_ownRouterName) {
           addEntry(prefix->getName(), lsa->getOriginRouter());

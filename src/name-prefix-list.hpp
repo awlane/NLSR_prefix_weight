@@ -84,11 +84,19 @@ class PrefixInfo {
     return ((lhs.getName() == rhs.getName()) && (lhs.getCost() == rhs.getCost()));
   }
 
+  friend std::ostream&
+  operator<<(std::ostream& os, const PrefixInfo& info)
+  {
+    os << "Prefix Info: (" << info.getName() << "," << info.getCost() << ")\n";
+    return os;
+  }
+
   ndn::Name m_prefixName;
   double m_prefixCost;
 
   mutable ndn::Block m_wire;
 };
+
 
 class NamePrefixList : private boost::equality_comparable<NamePrefixList>
 {

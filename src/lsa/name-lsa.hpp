@@ -117,6 +117,21 @@ private: // non-member operators
     return lhs.m_npl == rhs.m_npl;
   }
 
+  struct Comparator{
+    bool operator()(const PrefixInfo* a, const PrefixInfo* b) const {
+      if (a->getName() == b->getName() && a->getCost() == b->getCost()){
+        return false;
+      }
+      if (a->getName() != b->getName() && a->getName() < b->getName()) {
+        return false;
+      }
+      if (a->getName() == b->getName() && a->getCost() < b->getCost()) {
+        return false;
+      }
+      return true;
+    }
+  };
+
 private:
   NamePrefixList m_npl;
 };
