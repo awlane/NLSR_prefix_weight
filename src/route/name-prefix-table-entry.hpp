@@ -24,6 +24,7 @@
 
 #include "routing-table-pool-entry.hpp"
 #include "test-access-control.hpp"
+#include "nexthop.hpp"
 
 #include <list>
 #include <utility>
@@ -76,6 +77,12 @@ public:
 
   const NexthopList&
   getNexthopList() const
+  {
+    return m_nexthopList;
+  }
+
+  NexthopList&
+  getNexthopListForModification()
   {
     return m_nexthopList;
   }

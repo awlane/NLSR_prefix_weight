@@ -75,9 +75,10 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
 
     if (lsa->getType() == Lsa::Type::NAME) {
       auto nlsa = std::static_pointer_cast<NameLsa>(lsa);
-      for (const auto& name : nlsa->getNpl().getNames()) {
-        if (name != m_ownRouterName) {
-          addEntry(name, lsa->getOriginRouter());
+      for (const auto& prefix : nlsa->getNpl().getPrefixInfo()) {
+        if (prefix->getName() != m_ownRouterName) {
+          addEntry(prefix->getName(), lsa->getOriginRouter());
+          m_nexthopCost[DestNameKey(lsa->getOriginRouter(), prefix->getName())] = prefix->getCost();
         }
       }
     }
@@ -87,15 +88,17 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
       return;
     }
 
-    for (const auto name : namesToAdd) {
-      if (name->getName() != m_ownRouterName) {
-        addEntry(name->getName(), lsa->getOriginRouter());
+    for (const auto prefix : namesToAdd) {
+      if (prefix->getName() != m_ownRouterName) {
+        addEntry(prefix->getName(), lsa->getOriginRouter());
+        m_nexthopCost[DestNameKey(lsa->getOriginRouter(), prefix->getName())] = prefix->getCost();
       }
     }
 
-    for (const auto name : namesToRemove) {
-      if (name->getName() != m_ownRouterName) {
-        removeEntry(name->getName(), lsa->getOriginRouter());
+    for (const auto prefix : namesToRemove) {
+      if (prefix->getName() != m_ownRouterName) {
+        removeEntry(prefix->getName(), lsa->getOriginRouter());
+        m_nexthopCost.erase(m_nexthopCost.find(DestNameKey(lsa->getOriginRouter(), prefix->getName())));
       }
     }
   }
@@ -106,10 +109,24 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
       for (const auto& name : nlsa->getNpl().getNames()) {
         if (name != m_ownRouterName) {
           removeEntry(name, lsa->getOriginRouter());
+          m_nexthopCost.erase(m_nexthopCost.find(DestNameKey(lsa->getOriginRouter(), name)));
         }
       }
     }
   }
+}
+
+NexthopList&
+NamePrefixTable::adjustNexthopCosts(const NexthopList& nhlist, const ndn::Name nameToCheck, const ndn::Name destRouterName)
+{
+  NexthopList* new_nhList = new NexthopList();
+  for (auto nhItr = nhlist.getNextHops().begin();
+        nhItr != nhlist.getNextHops().end();
+        ++nhItr) {
+      const NextHop* newNextHop = new NextHop(nhItr->getConnectingFaceUri(), nhItr->getRouteCost() + m_nexthopCost[DestNameKey(destRouterName, nameToCheck)]);
+      new_nhList->addNextHop(*newNextHop);
+  }
+  return *new_nhList;
 }
 
 void
@@ -161,7 +178,7 @@ NamePrefixTable::addEntry(const ndn::Name& name, const ndn::Name& destRouter)
     // If this entry has next hops, we need to inform the FIB
     if (npte->getNexthopList().size() > 0) {
       NLSR_LOG_TRACE("Updating FIB with next hops for " << npte->getNamePrefix());
-      m_fib.update(name, npte->getNexthopList());
+      m_fib.update(name, adjustNexthopCosts(npte->getNexthopList(), name, destRouter));
     }
     // The routing table may recalculate and add a routing table entry
     // with no next hops to replace an existing routing table entry. In
@@ -183,7 +200,7 @@ NamePrefixTable::addEntry(const ndn::Name& name, const ndn::Name& destRouter)
 
     if ((*nameItr)->getNexthopList().size() > 0) {
       NLSR_LOG_TRACE("Updating FIB with next hops for " << (**nameItr));
-      m_fib.update(name, (*nameItr)->getNexthopList());
+      m_fib.update(name, adjustNexthopCosts((*nameItr)->getNexthopList(), name, destRouter));
     }
     else {
       NLSR_LOG_TRACE(npte->getNamePrefix() << " has no next hops; removing from FIB");
@@ -251,7 +268,7 @@ NamePrefixTable::removeEntry(const ndn::Name& name, const ndn::Name& destRouter)
       NLSR_LOG_TRACE(**nameItr << " has other routing table entries;"
                      << " updating FIB with next hops");
       (*nameItr)->generateNhlfromRteList();
-      m_fib.update(name, (*nameItr)->getNexthopList());
+      m_fib.update(name, adjustNexthopCosts((*nameItr)->getNexthopList(), name, destRouter));
     }
   }
   else {
