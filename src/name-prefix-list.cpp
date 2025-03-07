@@ -73,6 +73,16 @@ NamePrefixList::erase(const ndn::Name& name, const std::string& source)
   return isRemoved;
 }
 
+PrefixInfo*
+NamePrefixList::getPrefixInfoForName(const ndn::Name& name) const
+{
+  auto it = m_namesSources.find(name);
+  if (it == m_namesSources.end()) {
+    return nullptr;
+  }
+  return it->second.costObj;
+}
+
 std::list<ndn::Name>
 NamePrefixList::getNames() const
 {

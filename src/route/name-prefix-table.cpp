@@ -81,8 +81,8 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
       std::cout << nlsa->getNpl() << std::endl;
       for (const auto& prefix : nlsa->getNpl().getPrefixInfo()) {
         if (prefix->getName() != m_ownRouterName) {
-          addEntry(prefix->getName(), lsa->getOriginRouter());
           m_nexthopCost[DestNameKey(lsa->getOriginRouter(), prefix->getName())] = prefix->getCost();
+          addEntry(prefix->getName(), lsa->getOriginRouter());
         }
       }
     }
@@ -94,15 +94,21 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
 
     for (const auto prefix : namesToAdd) {
       if (prefix->getName() != m_ownRouterName) {
-        addEntry(prefix->getName(), lsa->getOriginRouter());
+        std::cout << "PREFIX ADDED" << std::endl;
+        std::cout << *prefix << std::endl;
         m_nexthopCost[DestNameKey(lsa->getOriginRouter(), prefix->getName())] = prefix->getCost();
+        addEntry(prefix->getName(), lsa->getOriginRouter());
+        std::cout << "SET COST" << std::endl;
+        std::cout << prefix->getName() << std::endl;
+        std::cout << lsa->getOriginRouter() << std::endl;
+        std::cout << m_nexthopCost[DestNameKey(lsa->getOriginRouter(), prefix->getName())] << std::endl;
       }
     }
 
     for (const auto prefix : namesToRemove) {
       if (prefix->getName() != m_ownRouterName) {
-        removeEntry(prefix->getName(), lsa->getOriginRouter());
         m_nexthopCost.erase(m_nexthopCost.find(DestNameKey(lsa->getOriginRouter(), prefix->getName())));
+        removeEntry(prefix->getName(), lsa->getOriginRouter());
       }
     }
   }
@@ -112,8 +118,8 @@ NamePrefixTable::updateFromLsdb(std::shared_ptr<Lsa> lsa, LsdbUpdate updateType,
       auto nlsa = std::static_pointer_cast<NameLsa>(lsa);
       for (const auto& name : nlsa->getNpl().getNames()) {
         if (name != m_ownRouterName) {
-          removeEntry(name, lsa->getOriginRouter());
           m_nexthopCost.erase(m_nexthopCost.find(DestNameKey(lsa->getOriginRouter(), name)));
+          removeEntry(name, lsa->getOriginRouter());
         }
       }
     }
@@ -127,6 +133,10 @@ NamePrefixTable::adjustNexthopCosts(const NexthopList& nhlist, const ndn::Name n
   for (auto nhItr = nhlist.getNextHops().begin();
         nhItr != nhlist.getNextHops().end();
         ++nhItr) {
+      std::cout << "APPLY COST" << std::endl;
+      std::cout << nameToCheck << std::endl;
+      std::cout << destRouterName << std::endl;
+      std::cout << m_nexthopCost[DestNameKey(destRouterName, nameToCheck)] << std::endl;
       const NextHop* newNextHop = new NextHop(nhItr->getConnectingFaceUri(), nhItr->getRouteCost() + m_nexthopCost[DestNameKey(destRouterName, nameToCheck)]);
       new_nhList->addNextHop(*newNextHop);
   }

@@ -132,6 +132,9 @@ public:
     return m_namesSources.size();
   }
 
+  PrefixInfo*
+  getPrefixInfoForName(const ndn::Name& name) const;
+
   std::list<ndn::Name>
   getNames() const;
 

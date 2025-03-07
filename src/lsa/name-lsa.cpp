@@ -140,27 +140,33 @@ NameLsa::update(const std::shared_ptr<Lsa>& lsa)
   std::cout << m_npl << std::endl;
   std::cout << "NEW" << std::endl;
   std::cout << nlsa->getNpl() << std::endl;
-  std::list<PrefixInfo*> newNames = nlsa->getNpl().getPrefixInfo();
-  std::list<PrefixInfo*> oldNames = m_npl.getPrefixInfo();
+
+  std::list<ndn::Name> newNames = nlsa->getNpl().getNames();
+  std::list<ndn::Name> oldNames = m_npl.getNames();
+  std::list<ndn::Name> nameRefToAdd;
   std::list<PrefixInfo*> namesToAdd;
 
   std::set_difference(newNames.begin(), newNames.end(), oldNames.begin(), oldNames.end(),
-                      std::inserter(namesToAdd, namesToAdd.begin()), Comparator);
+                      std::inserter(nameRefToAdd, nameRefToAdd.begin()));
   std::cout << "ADD" << std::endl;
-  for (const auto& name : namesToAdd) {
-    std::cout << *name << std::endl;
-    addName(name);
+  for (const auto& name : nameRefToAdd) {
+    std::cout << name << std::endl;
+    namesToAdd.push_back(nlsa->getNpl().getPrefixInfoForName(name));
+    addName(nlsa->getNpl().getPrefixInfoForName(name));
     updated = true;
   }
 
   // Also remove any names that are no longer being advertised.
+  std::list<ndn::Name> nameRefToRemove;
   std::list<PrefixInfo*> namesToRemove;
   std::set_difference(oldNames.begin(), oldNames.end(), newNames.begin(), newNames.end(),
-                      std::inserter(namesToRemove, namesToRemove.begin()), Comparator);
+                      std::inserter(nameRefToRemove, nameRefToRemove.begin()));
   std::cout << "SUB" << std::endl;
-  for (const auto& name : namesToRemove) {
-    std::cout << *name << std::endl;
-    removeName(name);
+  for (const auto& name : nameRefToRemove) {
+    std::cout << name << std::endl;
+    namesToRemove.push_back(m_npl.getPrefixInfoForName(name));
+    removeName(m_npl.getPrefixInfoForName(name));
+
     updated = true;
   }
   std::cout << "FINAL" << std::endl;
